@@ -66,6 +66,19 @@ const nuxtLink = (
   return { type, props: _props, slots }
 }
 
+// Renders a `<NuxtLink custom />` and captures the slot props
+const nuxtLinkCustomSlotProps = (
+  props: NuxtLinkProps = {},
+  nuxtLinkOptions: Partial<NuxtLinkOptions> = {},
+): Record<string, unknown> => {
+  const component = defineNuxtLink({ componentName: 'NuxtLink', ...nuxtLinkOptions })
+  let slotProps: Record<string, unknown> = {}
+  ;(
+    component as unknown as { setup: (props: NuxtLinkProps, context: { slots: Record<string, (props: any) => unknown> }) => () => unknown }
+  ).setup({ ...props, custom: true }, { slots: { default: (props: any) => { slotProps = props; return null } } })()
+  return slotProps
+}
+
 describe('nuxt-link:to', () => {
   it('renders link with `to` prop', () => {
     expect(nuxtLink({ to: '/to' }).props.to).toBe('/to')
@@ -475,5 +488,34 @@ describe('nuxt-link:useLink', () => {
     const trailingSlash = ref<'append' | 'remove'>('append')
     const link = component.useLink({ to: '/about', trailingSlash })
     expect(link.to.value).toBe('/about/')
+  })
+})
+
+describe('nuxt-link:custom', () => {
+  it('exposes prefetched in custom slot props for external links', () => {
+    const slotProps = nuxtLinkCustomSlotProps({ to: 'https://example.com' })
+    expect(slotProps).toHaveProperty('prefetched', false)
+  })
+
+  it('exposes prefetch function in custom slot props for external links', () => {
+    const slotProps = nuxtLinkCustomSlotProps({ to: 'https://example.com' })
+    expect(slotProps).toHaveProperty('prefetch')
+    expect(typeof slotProps.prefetch).toBe('function')
+  })
+
+  it('exposes prefetched in custom slot props for internal links', () => {
+    const component = defineNuxtLink({ componentName: 'NuxtLink' })
+    let capturedSlotProps: Record<string, unknown> = {}
+    const renderFn = (
+      component as unknown as { setup: (props: NuxtLinkProps, context: { slots: Record<string, (props: any) => unknown> }) => () => unknown }
+    ).setup({ to: '/about', custom: true }, {
+      slots: { default: (props: any) => { capturedSlotProps = props; return null } },
+    })
+    const [_type, _props, wrappedSlots] = renderFn() as [string, Record<string, unknown>, Record<string, (props: any) => unknown>]
+    // Call the wrapped default slot with mock RouterLink slot props
+    wrappedSlots.default({ href: '/about', isActive: false, isExactActive: false })
+    expect(capturedSlotProps).toHaveProperty('prefetched', false)
+    expect(capturedSlotProps).toHaveProperty('prefetch')
+    expect(typeof capturedSlotProps.prefetch).toBe('function')
   })
 })
