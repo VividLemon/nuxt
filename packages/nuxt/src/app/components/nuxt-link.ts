@@ -139,7 +139,7 @@ export interface NuxtLinkOptions extends
 
 type NuxtLinkDefaultSlotProps<CustomProp extends boolean = false> = CustomProp extends true
   ? {
-      href: string | undefined
+      href: string | null
       navigate: (e?: MouseEvent) => Promise<void>
       prefetch: (nuxtApp?: NuxtApp) => Promise<void>
       prefetched: boolean
@@ -498,7 +498,7 @@ export function defineNuxtLink (options: NuxtLinkOptions): NuxtLinkComponent & R
         ) || null
 
         const getCustomSlotProps = (routerLinkSlotProps?: RouterLinkSlotProps): NuxtLinkDefaultSlotProps<true> => ({
-          href: href.value || undefined, // set as undefined to avoid type assertion errors with `:href="href"`
+          href: href.value,
           navigate,
           get route () {
             if (!href.value) { return undefined }
@@ -515,7 +515,7 @@ export function defineNuxtLink (options: NuxtLinkOptions): NuxtLinkComponent & R
               redirectedFrom: undefined,
               meta: {},
               href: href.value,
-            } as unknown as RouteLocation & { href: string }
+            } satisfies RouteLocation & { href: string }
           },
           rel,
           target,
